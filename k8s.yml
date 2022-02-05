@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: powerapp
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: powerapp
+  template:
+    metadata:
+      labels:
+        app: powerapp
+    spec:
+      containers:
+        - name: powerapp
+          image: 172.24.5.45:5000/powerappz
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          ports:
+          - containerPort: 80
+            protocol: TCP
+      dnsPolicy: "None"
+      dnsConfig:
+        nameservers:
+          - 10.40.1.61
+          - 172.24.4.12
+          - 10.96.0.10
+        searches:
+          - svc.cluster.local
+          - cluster.local
+        options:
+          - name: ndots
+            value: "5"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: powerapp
+  namespace: production
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: powerapp
+  type: LoadBalancer
+
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: powerapp
+  namespace: production
+spec:
+  tls:
+    - hosts:
+      - powerapp.abujaelectricity.com
+      secretName: production-ssl
+  rules:
+    - host: powerapp.abujaelectricity.com
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: powerapp
+            servicePort: 80
